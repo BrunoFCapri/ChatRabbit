@@ -1,0 +1,6 @@
+target/
+.vscode/
+.github/
+.idea/
+rabbitmq/
+*.md

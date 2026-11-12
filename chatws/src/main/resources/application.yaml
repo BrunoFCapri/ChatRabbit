@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: chatws
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
+chat:
+  stomp-relay:
+    # Puerto del plugin rabbitmq_stomp (el relay de WebSocketConfig se conecta acá)
+    port: 61613

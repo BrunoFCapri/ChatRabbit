@@ -1,0 +1,49 @@
+services:
+  rabbitmq:
+    image: rabbitmq:4-management
+    container_name: chatws-rabbitmq
+    # Hostname fijo: RabbitMQ guarda los datos por nombre de nodo (rabbit@<hostname>)
+    hostname: rabbitmq
+    ports:
+      - "5672:5672"     # AMQP
+      - "61613:61613"   # STOMP (lo usa el broker relay de Spring)
+      - "15672:15672"   # Panel de administración: http://localhost:15672 (guest / guest)
+    volumes:
+      - ./rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      # Verifica que todos los listeners (AMQP, STOMP, management) acepten conexiones
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_port_connectivity"]
+      interval: 5s
+      timeout: 10s
+      retries: 20
+
+  # Dos instancias de la app contra el mismo RabbitMQ para probar la escalabilidad horizontal
+  chatws-1:
+    build: .
+    image: chatws:latest
+    container_name: chatws-1
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq   # dentro de la red de Docker, no localhost
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  chatws-2:
+    build: .               # misma imagen; el segundo build sale de la caché
+    image: chatws:latest
+    container_name: chatws-2
+    ports:
+      - "8081:8080"
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      chatws-1:
+        condition: service_started
+
+volumes:
+  rabbitmq-data:
